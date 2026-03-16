@@ -1,0 +1,19 @@
+// This listens for any key press on the physical keyboard
+window.addEventListener('keydown', function(e) {
+    const display = document.getElementById('display');
+
+    if (e.key === 'Enter') {
+        // Pressing Enter triggers the voice
+        speak();
+    } else if (e.key === 'Escape') {
+        // Pressing Escape clears the text
+        clearText();
+    } else {
+        // If the user isn't clicking the input box, 
+        // focus it automatically so they can just start typing.
+        if (document.activeElement !== display) {
+            display.focus();
+        }
+    }
+});
+
