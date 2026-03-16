@@ -17,3 +17,25 @@ window.addEventListener('keydown', function(e) {
     }
 });
 
+<select id="voiceSelect">
+    <option>Loading voices...</option>
+</select>
+
+<script>
+    function populateVoiceList() {
+        const voices = window.speechSynthesis.getVoices();
+        const voiceSelect = document.getElementById('voiceSelect');
+        voiceSelect.innerHTML = '';
+        
+        voices.forEach((voice) => {
+            const option = document.createElement('option');
+            option.textContent = `${voice.name} (${voice.lang})`;
+            option.value = voice.name;
+            voiceSelect.appendChild(option);
+        });
+    }
+
+    // This handles the way different browsers load voices
+    window.speechSynthesis.onvoiceschanged = populateVoiceList;
+</script>
+
