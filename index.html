@@ -89,20 +89,30 @@
         const voiceSelect = document.getElementById('voiceSelect');
 
         // 1. Populate the Voice List
-        function populateVoices() {
-            const voices = window.speechSynthesis.getVoices();
-            voiceSelect.innerHTML = '';
-            voices.forEach(voice => {
-                const option = document.createElement('option');
-                option.textContent = `${voice.name} (${voice.lang})`;
-                option.value = voice.name;
-                // Try to auto-select a "Natural" or "Google" voice
-                if (voice.name.includes('Natural') || voice.name.includes('Google')) {
-                    option.selected = true;
-                }
-                voiceSelect.appendChild(option);
-            });
+    function populateVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        const currentSelection = voiceSelect.value; // Remember what was picked
+    
+        voiceSelect.innerHTML = '';
+    
+        voices.forEach(voice => {
+            const option = document.createElement('option');
+            option.textContent = `${voice.name} (${voice.lang})`;
+            option.value = voice.name;
+            voiceSelect.appendChild(option);
+        });
+
+        // If we already had a selection, keep it!
+        if (currentSelection && currentSelection !== "Loading...") {
+            voiceSelect.value = currentSelection;
+        } else {
+            // Otherwise, try to find a "Natural" one for the first time
+            const naturalVoice = voices.find(v => v.name.includes('Natural') || v.name.includes('Google'));
+            if (naturalVoice) {
+                voiceSelect.value = naturalVoice.name;
+            }
         }
+}
 
         window.speechSynthesis.onvoiceschanged = populateVoices;
 
@@ -121,11 +131,19 @@
             const text = display.value;
             if (!text) return;
 
+            // CANCEL any current speech before starting new speech
+            // This prevents "queueing up" multiple voices if you click fast
+            window.speechSynthesis.cancel();
+
             const msg = new SpeechSynthesisUtterance(text);
             const voices = window.speechSynthesis.getVoices();
             
-            // Link to the selected voice in dropdown
-            msg.voice = voices.find(v => v.name === voiceSelect.value);
+            // Find the specific voice object that matches the name in the dropdown
+            const selectedVoice = voices.find(v => v.name === voiceSelect.value);
+            if (selectedVoice) {
+                msg.voice = selectedVoice;
+            }
+
             msg.rate = 0.9; 
             window.speechSynthesis.speak(msg);
         }
