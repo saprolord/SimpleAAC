@@ -1,42 +1,148 @@
-//This listens for any key press on the physical keyboard
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AAC Project Alpha</title>
+    <style>
+        /* Modern, clean look with high contrast for accessibility */
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            margin: 0; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            background: #e5e7eb; 
+        }
 
-window.addEventListener('keydown', function(e) {
-    const display = document.getElementById('display');
+        #display { 
+            width: 100%; 
+            height: 100px; 
+            font-size: 2.5rem; 
+            margin-bottom: 20px; 
+            padding: 15px; 
+            border: 4px solid #374151; 
+            border-radius: 12px; 
+            box-sizing: border-box;
+        }
 
-    if (e.key === 'Enter') {
-        // Pressing Enter triggers the voice
-        speak();
-    } else if (e.key === 'Escape') {
-        // Pressing Escape clears the text
-        clearText();
-    } else {
-        // If the user isn't clicking the input box, 
-        // focus it automatically so they can just start typing.
-        if (document.activeElement !== display) {
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        select { padding: 10px; border-radius: 5px; flex-grow: 1; }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px; 
+            flex-grow: 1; 
+        }
+
+        button { 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 15px; 
+            background: #3b82f6; 
+            color: white; 
+            box-shadow: 0 6px #2563eb; 
+            transition: 0.1s; 
+        }
+
+        button:active { 
+            box-shadow: 0 2px #2563eb; 
+            transform: translateY(4px); 
+        }
+
+        .speak-btn { background: #10b981; box-shadow: 0 6px #059669; grid-column: span 3; height: 80px; margin-top: 10px; }
+        .clear-btn { background: #ef4444; box-shadow: 0 6px #dc2626; }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="display" placeholder="Type or use buttons...">
+
+    <div class="controls">
+        <label for="voiceSelect">Voice:</label>
+        <select id="voiceSelect"><option>Loading...</option></select>
+    </div>
+    
+    <div class="grid">
+        <button onclick="addText('Yes')">YES</button>
+        <button onclick="addText('No')">NO</button>
+        <button onclick="addText('Help')">HELP</button>
+        <button onclick="addText('Water')">WATER</button>
+        <button onclick="addText('Food')">FOOD</button>
+        <button class="clear-btn" onclick="clearText()">CLEAR</button>
+        <button class="speak-btn" onclick="speak()">🔊 SPEAK</button>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const voiceSelect = document.getElementById('voiceSelect');
+
+        // 1. Populate the Voice List
+        function populateVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.name;
+                // Try to auto-select a "Natural" or "Google" voice
+                if (voice.name.includes('Natural') || voice.name.includes('Google')) {
+                    option.selected = true;
+                }
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        window.speechSynthesis.onvoiceschanged = populateVoices;
+
+        // 2. Button Logic
+        function addText(word) {
+            display.value += (display.value ? ' ' : '') + word;
             display.focus();
         }
-    }
-});
 
-<select id="voiceSelect">
-    <option>Loading voices...</option>
-</select>
+        function clearText() {
+            display.value = '';
+        }
 
-<script>
-    function populateVoiceList() {
-        const voices = window.speechSynthesis.getVoices();
-        const voiceSelect = document.getElementById('voiceSelect');
-        voiceSelect.innerHTML = '';
-        
-        voices.forEach((voice) => {
-            const option = document.createElement('option');
-            option.textContent = `${voice.name} (${voice.lang})`;
-            option.value = voice.name;
-            voiceSelect.appendChild(option);
+        // 3. Speech Logic
+        function speak() {
+            const text = display.value;
+            if (!text) return;
+
+            const msg = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Link to the selected voice in dropdown
+            msg.voice = voices.find(v => v.name === voiceSelect.value);
+            msg.rate = 0.9; 
+            window.speechSynthesis.speak(msg);
+        }
+
+        // 4. Physical Keyboard Logic
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                speak();
+            } else if (e.key === 'Escape') {
+                clearText();
+            } else {
+                // Keep the input box focused for typing
+                if (document.activeElement !== display) {
+                    display.focus();
+                }
+            }
         });
-    }
-
-    // This handles the way different browsers load voices
-    window.speechSynthesis.onvoiceschanged = populateVoiceList;
-</script>
-
+    </script>
+</body>
+</html>
