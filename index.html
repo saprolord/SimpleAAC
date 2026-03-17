@@ -2,165 +2,128 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AAC Project Alpha</title>
     <style>
-        /* Modern, clean look with high contrast for accessibility */
         body { 
-            font-family: system-ui, -apple-system, sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            margin: 0; 
-            padding: 20px; 
-            box-sizing: border-box; 
-            background: #e5e7eb; 
-        }
-
-        #display { 
-            width: 100%; 
-            height: 100px; 
-            font-size: 2.5rem; 
-            margin-bottom: 20px; 
-            padding: 15px; 
-            border: 4px solid #374151; 
-            border-radius: 12px; 
+            font-family: sans-serif; 
+            margin: 0; padding: 10px; 
+            background: #1a1a1a; /* Dark background for high contrast */
+            display: flex; flex-direction: column; height: 100vh;
             box-sizing: border-box;
+            overflow: hidden; /* Prevents accidental scrolling */
         }
 
-        .controls {
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        /* Large Display Area */
+        #display {
+            width: 100%; height: 20%;
+            background: white; border-radius: 10px;
+            font-size: 3rem; display: flex; align-items: center;
+            padding: 0 20px; margin-bottom: 10px;
+            box-sizing: border-box; overflow-x: auto; white-space: nowrap;
         }
 
-        select { padding: 10px; border-radius: 5px; flex-grow: 1; }
+        /* Keyboard Grid */
+        .keyboard {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr); 
+        grid-template-rows: repeat(5, 1fr);
+        gap: 10px; 
+        flex-grow: 1;
+    }
 
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 15px; 
-            flex-grow: 1; 
+        button {
+            background: #444; color: white; border: none;
+            border-radius: 12px; font-size: 1.8rem; font-weight: bold;
+            box-shadow: 0 6px #000; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
         }
 
-        button { 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border: none; 
-            border-radius: 15px; 
-            background: #3b82f6; 
-            color: white; 
-            box-shadow: 0 6px #2563eb; 
-            transition: 0.1s; 
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px #000;
+            background: #666;
         }
 
-        button:active { 
-            box-shadow: 0 2px #2563eb; 
-            transform: translateY(4px); 
+        /* Functional Keys Styling */
+        .space { grid-column: span 3; background: #555; }
+        .del { background: #d97706; } 
+        .clear { background: #dc2626; }
+
+        /* The "Big" Speak Button in the Lower Right */
+        .speak { 
+            grid-column: 6 / 8; /* Starts at column 6, ends at 8 */
+            grid-row: 4 / 6;    /* Spans the last two rows */
+            background: #16a34a; 
+            font-size: 2.2rem;
         }
 
-        .speak-btn { background: #10b981; box-shadow: 0 6px #059669; grid-column: span 3; height: 80px; margin-top: 10px; }
-        .clear-btn { background: #ef4444; box-shadow: 0 6px #dc2626; }
+        /* Voice Selector (Tucked at top) */
+        #voiceSelect { margin-bottom: 10px; padding: 5px; width: 100%; }
     </style>
 </head>
 <body>
 
-    <input type="text" id="display" placeholder="Type or use buttons...">
+    <select id="voiceSelect"></select>
+    <div id="display"></div>
 
-    <div class="controls">
-        <label for="voiceSelect">Voice:</label>
-        <select id="voiceSelect"><option>Loading...</option></select>
-    </div>
-    
-    <div class="grid">
-        <button onclick="addText('Yes')">YES</button>
-        <button onclick="addText('No')">NO</button>
-        <button onclick="addText('Help')">HELP</button>
-        <button onclick="addText('Water')">WATER</button>
-        <button onclick="addText('Food')">FOOD</button>
-        <button class="clear-btn" onclick="clearText()">CLEAR</button>
-        <button class="speak-btn" onclick="speak()">🔊 SPEAK</button>
-    </div>
+    <div class="keyboard" id="keyboard">
+        </div>
 
     <script>
         const display = document.getElementById('display');
+        const keyboard = document.getElementById('keyboard');
         const voiceSelect = document.getElementById('voiceSelect');
 
-        // 1. Populate the Voice List
-    function populateVoices() {
-        const voices = window.speechSynthesis.getVoices();
-        const currentSelection = voiceSelect.value; // Remember what was picked
-    
-        voiceSelect.innerHTML = '';
-    
-        voices.forEach(voice => {
-            const option = document.createElement('option');
-            option.textContent = `${voice.name} (${voice.lang})`;
-            option.value = voice.name;
-            voiceSelect.appendChild(option);
+        let text = "";
+
+        // 1. Create Alphabet Keys
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        letters.forEach(char => {
+            const btn = document.createElement('button');
+            btn.innerText = char;
+            btn.onclick = () => { text += char; updateDisplay(); };
+            keyboard.appendChild(btn);
         });
 
-        // If we already had a selection, keep it!
-        if (currentSelection && currentSelection !== "Loading...") {
-            voiceSelect.value = currentSelection;
-        } else {
-            // Otherwise, try to find a "Natural" one for the first time
-            const naturalVoice = voices.find(v => v.name.includes('Natural') || v.name.includes('Google'));
-            if (naturalVoice) {
-                voiceSelect.value = naturalVoice.name;
-            }
-        }
-}
+        // 2. Add Functional Keys
+        const keys = [
+            { label: 'SPACE', class: 'space', action: () => text += " " },
+            { label: '⌫', class: 'del', action: () => text = text.slice(0, -1) },
+            { label: 'CLEAR', class: 'clear', action: () => text = "" },
+            { label: '🔊 SPEAK', class: 'speak', action: () => speak() }
+        ];
 
-        window.speechSynthesis.onvoiceschanged = populateVoices;
+        keys.forEach(k => {
+            const btn = document.createElement('button');
+            btn.innerText = k.label;
+            btn.className = k.class;
+            btn.onclick = () => { k.action(); updateDisplay(); };
+            keyboard.appendChild(btn);
+        });
 
-        // 2. Button Logic
-        function addText(word) {
-            display.value += (display.value ? ' ' : '') + word;
-            display.focus();
-        }
-
-        function clearText() {
-            display.value = '';
+        function updateDisplay() {
+            display.innerText = text;
+            // Scroll to the end of the text
+            display.scrollLeft = display.scrollWidth;
         }
 
-        // 3. Speech Logic
         function speak() {
-            const text = display.value;
             if (!text) return;
-
-            // CANCEL any current speech before starting new speech
-            // This prevents "queueing up" multiple voices if you click fast
             window.speechSynthesis.cancel();
-
             const msg = new SpeechSynthesisUtterance(text);
             const voices = window.speechSynthesis.getVoices();
-            
-            // Find the specific voice object that matches the name in the dropdown
-            const selectedVoice = voices.find(v => v.name === voiceSelect.value);
-            if (selectedVoice) {
-                msg.voice = selectedVoice;
-            }
-
-            msg.rate = 0.9; 
+            msg.voice = voices.find(v => v.name === voiceSelect.value);
+            msg.rate = 0.9;
             window.speechSynthesis.speak(msg);
         }
 
-        // 4. Physical Keyboard Logic
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                speak();
-            } else if (e.key === 'Escape') {
-                clearText();
-            } else {
-                // Keep the input box focused for typing
-                if (document.activeElement !== display) {
-                    display.focus();
-                }
-            }
-        });
+        // Voice Population (Filtered for UK)
+        function populateVoices() {
+            const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en-GB'));
+            voiceSelect.innerHTML = voices.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        }
+        window.speechSynthesis.onvoiceschanged = populateVoices;
     </script>
 </body>
 </html>
