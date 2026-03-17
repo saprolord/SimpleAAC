@@ -76,13 +76,33 @@
         const voiceSelect = document.getElementById('voiceSelect');
 
         let text = "";
+        let isLocked = false; // The lockout state
+        const DEBOUNCE_DELAY = 500; // 0.5 seconds
+
+        function handleInput(action) {
+            if (isLocked) return; // Ignore if we are in the delay period
+
+            action(); // Run the actual button logic
+            updateDisplay();
+
+            // Start the lockout
+            isLocked = true;
+            
+            // Visual feedback: briefly dim the keyboard to show it's "reloading"
+            keyboard.style.opacity = "0.7";
+
+            setTimeout(() => {
+                isLocked = false;
+                keyboard.style.opacity = "1.0";
+            }, DEBOUNCE_DELAY);
+        }
 
         // 1. Create Alphabet Keys
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
         letters.forEach(char => {
             const btn = document.createElement('button');
             btn.innerText = char;
-            btn.onclick = () => { text += char; updateDisplay(); };
+            btn.onclick = () => handleInput(() => { text += char; });
             keyboard.appendChild(btn);
         });
 
@@ -98,13 +118,12 @@
             const btn = document.createElement('button');
             btn.innerText = k.label;
             btn.className = k.class;
-            btn.onclick = () => { k.action(); updateDisplay(); };
+            btn.onclick = () => handleInput(k.action);
             keyboard.appendChild(btn);
         });
 
         function updateDisplay() {
             display.innerText = text;
-            // Scroll to the end of the text
             display.scrollLeft = display.scrollWidth;
         }
 
@@ -118,10 +137,11 @@
             window.speechSynthesis.speak(msg);
         }
 
-        // Voice Population (Filtered for UK)
         function populateVoices() {
             const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en-GB'));
             voiceSelect.innerHTML = voices.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            const bestUK = voices.find(v => v.name.includes('Natural') || v.name.includes('Google'));
+            if (bestUK) voiceSelect.value = bestUK.name;
         }
         window.speechSynthesis.onvoiceschanged = populateVoices;
     </script>
